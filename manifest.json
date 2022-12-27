@@ -1,10 +1,10 @@
 {
 	"id": "obsidian-of-sync",
 	"name": "Obsidian Omnifocus Sync",
-	"version": "0.1",
+	"version": "0.2",
 	"minAppVersion": "0.15.0",
 	"description": "A plugin for sync between Obsidian and Omnifocus, create Todo",
-	"author": "Royx",
-	"authorUrl": "royxue.me",
+	"author": "eby",
+	"authorUrl": "ryaneby.com",
 	"isDesktopOnly": false
 }

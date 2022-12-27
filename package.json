@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-of-sync",
-	"version": "0.1",
+	"version": "0.2",
 	"description": "A plugin for sync between Obsidian and Omnifocus",
 	"main": "main.js",
 	"scripts": {
