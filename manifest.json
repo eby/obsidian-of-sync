@@ -1,9 +1,9 @@
 {
-	"id": "obsidian-things3-sync",
-	"name": "Obsidian Things3 Sync",
-	"version": "1.0.3",
+	"id": "obsidian-of-sync",
+	"name": "Obsidian Omnifocus Sync",
+	"version": "0.1",
 	"minAppVersion": "0.15.0",
-	"description": "A plugin for sync between Obsidian and Things3, create Todo and sync Todo status",
+	"description": "A plugin for sync between Obsidian and Omnifocus, create Todo",
 	"author": "Royx",
 	"authorUrl": "royxue.me",
 	"isDesktopOnly": false
