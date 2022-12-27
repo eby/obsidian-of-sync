@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, EditorPosition, Notice, Plugin } from 'obsidian';
+import { App, Editor, MarkdownView, EditorPosition, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
 
 function getCurrentLine(editor: Editor, view: MarkdownView) {
 	const lineNumber = editor.getCursor().line
@@ -8,7 +8,16 @@ function getCurrentLine(editor: Editor, view: MarkdownView) {
 
 interface TodoInfo {
 	title: string,
+	tags: string,
 	date: string
+}
+
+interface PluginSettings {
+	defaultTags: string
+}
+
+const DEFAULT_SETTINGS: PluginSettings = {
+	defaultTags: ''
 }
 
 function urlEncode(line: string) {
@@ -16,13 +25,15 @@ function urlEncode(line: string) {
 	return line
 }
 
-function contructTodo(line: string, fileName: string){
+function contructTodo(line: string, settings: PluginSettings, fileName: string){
 	line = line.trim();
+	const tags = extractTags(line, settings.defaultTags);
 
 	line = line.replace(/#([^\s]+)/gs, '');
 
 	const todo: TodoInfo = {
 		title: extractTitle(line),
+		tags: tags,
 		date: extractDate(fileName)
 	}
 
@@ -50,6 +61,19 @@ function extractTitle(line: string) {
 	return title;
 }
 
+function extractTags(line: string, setting_tags: string){
+	const regex = /#([^\s]+)/gs
+	const array = [...line.matchAll(regex)]
+	const tag_array = array.map(x => x[1])
+	if (setting_tags.length > 0) {
+		tag_array.push(setting_tags);
+	}
+	line = line.replace(regex, '');
+	const tags = tag_array.join(',')
+
+	return tags;
+}
+
 function extractTarget(line: string) {
 	const regexId = /task\/(\w+)/
 	const id = line.match(regexId);
@@ -73,7 +97,7 @@ function extractTarget(line: string) {
 }
 
 function createTodo(todo: TodoInfo, deepLink: string){
-	const url = `omnifocus://x-callback-url/add?name=${todo.title}&note=${deepLink}&defer=${todo.date}&autosave=true&x-success=obsidian://of-sync-id`;
+	const url = `omnifocus://x-callback-url/paste?target=inbox&content=-%20${todo.title}%20%40defer%28${todo.date}%29%20%40tags%28${todo.tags}%29%0A${deepLink}&x-success=obsidian://of-sync-id`;
 	window.open(url);
 }
 
@@ -83,8 +107,13 @@ function updateTodo(todoId: string, completed: string){
 }
 
 export default class OFPlugin extends Plugin {
+	settings: PluginSettings;
 
 	async onload() {
+
+		// Setup Settings Tab
+		await this.loadSettings();
+		this.addSettingTab(new OFSyncSettingTab(this.app, this));
 
 		// Register Protocol Handler
 		this.registerObsidianProtocolHandler("of-sync-id", async (id) => {
@@ -131,7 +160,7 @@ export default class OFPlugin extends Plugin {
 					const obsidianDeepLink = (this.app as any).getObsidianUrl(fileTitle)
 					const encodedLink = urlEncode(obsidianDeepLink)
 					const line = getCurrentLine(editor, view)
-					const todo = contructTodo(line, fileName)
+					const todo = contructTodo(line, this.settings, fileName)
 					createTodo(todo, encodedLink)
 				}
 			}
@@ -154,7 +183,7 @@ export default class OFPlugin extends Plugin {
 					} else {
 						view.app.commands.executeCommandById("editor:toggle-checklist-status")
 						updateTodo(target.todoId, target.afterStatus)
-						new Notice(`${target.todoId} set completed:${target.afterStatus} on things3`);
+						new Notice(`${target.todoId} set completed:${target.afterStatus} on omnifocus`);
 					}
 
 				}
@@ -163,5 +192,41 @@ export default class OFPlugin extends Plugin {
 	}
 
 	onunload() {
+	}
+
+	async loadSettings() {
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+	}
+
+	async saveSettings() {
+		await this.saveData(this.settings);
+	}
+}
+
+class OFSyncSettingTab extends PluginSettingTab {
+	plugin: OFPlugin;
+
+	constructor(app: App, plugin: OFPlugin) {
+		super(app, plugin);
+		this.plugin = plugin;
+	}
+
+	display(): void {
+		const {containerEl} = this;
+
+		containerEl.empty();
+		containerEl.createEl('h2', {text: 'Settings for Obsidian Omnifocus Sync.'});
+
+		new Setting(containerEl)
+			.setName('Default Tags')
+			.setDesc('The default tags for Obsidian Todo; Using comma(,) \
+			to separate multiple tags; Leave this blank for no default tags')
+			.addText(text => text
+				.setPlaceholder('Leave your tags here')
+				.setValue(this.plugin.settings.defaultTags)
+				.onChange(async (value) => {
+					this.plugin.settings.defaultTags = value;
+					await this.plugin.saveSettings();
+				}));
 	}
 }
